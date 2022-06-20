@@ -15,6 +15,19 @@
         app:layout_scrollFlags="scroll|enterAlwaysCollapsed"
         />
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="40dp"
+        android:textColor="@color/black"
+        android:text="MY TASKS"
+        android:layout_marginStart="10dp"
+        android:textStyle="bold"
+        android:layout_marginTop="20dp"
+
+        />
+
+    <!--
     //Add a task
     <LinearLayout
         android:layout_width="match_parent"
@@ -54,16 +67,36 @@
         </FrameLayout>
 
     </LinearLayout>
+    -->
 
-    <androidx.recyclerview.widget.RecyclerView
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:id="@+id/ryTasks"
-        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-        android:nestedScrollingEnabled="true"
-        android:layout_marginTop="20dp"
-        />
+        >
 
+        // tasks list
+        <androidx.recyclerview.widget.RecyclerView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/ryTasks"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            android:nestedScrollingEnabled="true"
+            android:layout_marginTop="20dp"
+            />
 
+        // add a new task
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/btnAdd_task"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="20dp"
+            android:layout_gravity="bottom|end"
+            android:backgroundTint="@color/teal_200"
+            android:src="@android:drawable/ic_input_add"
+            android:textSize="70sp"
+            app:fabCustomSize="70dp"
+            />
+
+    </FrameLayout>
 
 </LinearLayout>

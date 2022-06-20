@@ -7,20 +7,29 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.app.DatePickerDialog;
 import android.app.Dialog;
+import android.app.TimePickerDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.text.format.DateFormat;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.TimePicker;
 import android.widget.Toast;
 
 import com.example.todolist.Adapters.TasksAdapter;
@@ -34,6 +43,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 
 public class HomeScreen extends AppCompatActivity
@@ -116,12 +126,12 @@ public class HomeScreen extends AppCompatActivity
         }
         else if(id == R.id.help)
         {
-            helpMy();
+            helpMe();
         }
         return true;
     }
 
-    private void helpMy()
+    private void helpMe()
     {
 
         Dialog dialog = new Dialog(HomeScreen.this);
@@ -165,15 +175,12 @@ public class HomeScreen extends AppCompatActivity
                 for(DataSnapshot dataSnapshot : snapshot.getChildren())
                 {
                     Task task;
-                    String taskDescription = "";
                     String taskTitle = dataSnapshot.child("title").getValue().toString();
                     String taskId = dataSnapshot.getKey();
                     int taskStat = Integer.valueOf(dataSnapshot.child("stat").getValue().toString());
+                    String taskDescription = dataSnapshot.child("description").getValue().toString();
 
-                    if(dataSnapshot.child("description").exists())
-                        taskDescription = dataSnapshot.child("description").getValue().toString();
-
-                    task = new Task(taskTitle,taskStat,taskId);
+                    task = new Task(taskTitle,taskDescription,taskStat,taskId);
 
                     toDoList.add(task);
                 }
@@ -210,14 +217,23 @@ public class HomeScreen extends AppCompatActivity
 
     private void  newTask()
     {
-
         Dialog dialog = new Dialog(HomeScreen.this);
         dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         dialog.setContentView(R.layout.new_task);
+        
         dialog.show();
+
+
 
         EditText etTitle = dialog.findViewById(R.id.etTitle);
         EditText etDescription = dialog.findViewById(R.id.etDescription);
+        TextView  tvDate = dialog.findViewById(R.id.tvDate);
+        LinearLayout ly_DueDate = dialog.findViewById(R.id.ly_DueDate);
+        ly_DueDate.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View view)
+            { DatePicker(tvDate); }});
 
         Button btnAdd = dialog.findViewById(R.id.btnAdd);
         btnAdd.setOnClickListener(new View.OnClickListener()
@@ -243,6 +259,100 @@ public class HomeScreen extends AppCompatActivity
                 }
             }
         });
+
+    }
+
+    private void DatePicker(TextView  tvDate)
+    {
+        Calendar calendar = Calendar.getInstance();
+        int YEAR = calendar.get(Calendar.YEAR);
+        int MONTH = calendar.get(Calendar.MONTH);
+        int DATE = calendar.get(Calendar.DATE);
+
+        DatePickerDialog datePickerDialog = new DatePickerDialog(this, new DatePickerDialog.OnDateSetListener() {
+            @Override
+            public void onDateSet(DatePicker datePicker, int year, int month, int date) {
+
+                Calendar calendar1 = Calendar.getInstance();
+                calendar1.set(Calendar.YEAR, year);
+                calendar1.set(Calendar.MONTH, month);
+                calendar1.set(Calendar.DATE, date);
+
+                String dateText = DateFormat.format("EEEE, MMM d, yyyy", calendar1).toString();
+
+                //dateTextView.setText(dateText);
+                //tvDate.setText(dateText);
+
+                Calendar now = Calendar.getInstance();
+                final String FormatString = "EEEE, MMM d, yyyy";
+
+                if(now.get(Calendar.DATE) - calendar1.get(Calendar.DATE) > 0 )
+                    tvDate.setText("Pleas enter a reasonable date");
+                else
+                {
+                    if (now.get(Calendar.DATE) == calendar1.get(Calendar.DATE) )
+                        tvDate.setText("Today, ");
+                    else if (now.get(Calendar.DATE) - calendar1.get(Calendar.DATE) == -1 )
+                        tvDate.setText("Tomorrow, ");
+                    else
+                        tvDate.setText(DateFormat.format(FormatString, calendar1).toString()+". ");
+                    timePicker(tvDate,calendar1);
+                }
+
+            }
+        }, YEAR, MONTH, DATE);
+
+        datePickerDialog.show();
+
+    }
+
+    private void timePicker(TextView  tvDate,Calendar calendarDate)
+    {
+        Calendar calendar = Calendar.getInstance();
+        int HOUR = calendar.get(Calendar.HOUR);
+        int MINUTE = calendar.get(Calendar.MINUTE);
+        boolean is24HourFormat = DateFormat.is24HourFormat(this);
+
+        TimePickerDialog timePickerDialog = new TimePickerDialog(this, new TimePickerDialog.OnTimeSetListener() {
+            @Override
+            public void onTimeSet(TimePicker timePicker, int hour, int minute) {
+                Log.i("HomeScreen", "onTimeSet: " + hour + minute);
+
+                Calendar calendar1 = Calendar.getInstance();
+                calendar1.set(Calendar.HOUR, hour);
+                calendar1.set(Calendar.MINUTE, minute);
+                String dateText = DateFormat.format("h:mm a", calendar1).toString();
+                String date = tvDate.getText().toString();
+
+                Calendar now = Calendar.getInstance();
+
+                if(now.get(Calendar.DATE) == calendarDate.get(Calendar.DATE))
+                {
+                    // Late --> not possible
+                    if(now.get(Calendar.HOUR) > calendar1.get(Calendar.HOUR))
+                        tvDate.setText("Pleas enter a reasonable time and date");
+                    else if(now.get(Calendar.HOUR) == calendar1.get(Calendar.HOUR) &&  now.get(Calendar.MINUTE) - calendar1.get(Calendar.MINUTE) > 0)
+                        tvDate.setText("Pleas enter a reasonable time and date");
+
+                    // At list 30 mints until the task due ends
+                    else if(now.get(Calendar.HOUR) == calendar1.get(Calendar.HOUR) &&  now.get(Calendar.MINUTE) - calendar1.get(Calendar.MINUTE) > -30)
+                        tvDate.setText("Pleas enter at least 30 minutes difference");
+                    else if(now.get(Calendar.HOUR)+1 == calendar1.get(Calendar.HOUR)
+                            &&  now.get(Calendar.MINUTE) - calendar1.get(Calendar.MINUTE) > 30)
+                    {
+                        tvDate.setText("Pleas enter at least 30 minutes difference");
+                    }
+                    else
+                        tvDate.setText(date+dateText);
+                }
+                else
+                    tvDate.setText(date+dateText);
+
+
+            }
+        }, HOUR, MINUTE, is24HourFormat);
+
+        timePickerDialog.show();
 
     }
 

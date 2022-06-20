@@ -12,12 +12,6 @@ public class Task
         this.stat = stat;
     }
 
-    public Task(String title,int stat)
-    {
-        this.title = title;
-        this.stat = stat;
-    }
-
     public Task(String title, String description,int stat,String id)
     {
         this.title = title;
@@ -25,12 +19,7 @@ public class Task
         this.stat = stat;
         this.id = id;
     }
-    public Task(String title,int stat ,String id)
-    {
-        this.title = title;
-        this.stat = stat;
-        this.id = id;
-    }
+
 
     public String getTitle() {return this.title;}
     public void setTitle(String title) {this.title = title;}
