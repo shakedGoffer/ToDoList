@@ -42,9 +42,13 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Date;
+import java.util.Locale;
 
 public class HomeScreen extends AppCompatActivity
 {
@@ -55,6 +59,9 @@ public class HomeScreen extends AppCompatActivity
     TasksAdapter tasksAdapter;
 
     public static ArrayList<Task> toDoList = new ArrayList<Task>();
+
+    // deu date and time
+    String dueDate ,dueTime;
 
     //Firebase
     DatabaseReference reference;
@@ -85,6 +92,8 @@ public class HomeScreen extends AppCompatActivity
             public void onClick(View v)
             {
                 newTask();
+                dueDate = "non";
+                dueTime = "non";
             }
         });
 
@@ -133,7 +142,6 @@ public class HomeScreen extends AppCompatActivity
 
     private void helpMe()
     {
-
         Dialog dialog = new Dialog(HomeScreen.this);
         dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         dialog.setContentView(R.layout.help);
@@ -163,6 +171,7 @@ public class HomeScreen extends AppCompatActivity
         });
     }
 
+
     // Set to do list
     private void setUpData()
     {
@@ -179,8 +188,10 @@ public class HomeScreen extends AppCompatActivity
                     String taskId = dataSnapshot.getKey();
                     int taskStat = Integer.valueOf(dataSnapshot.child("stat").getValue().toString());
                     String taskDescription = dataSnapshot.child("description").getValue().toString();
+                    String taskDueDate = dataSnapshot.child("dueDate").getValue().toString();
+                    String taskDueTime = dataSnapshot.child("dueTime").getValue().toString();
 
-                    task = new Task(taskTitle,taskDescription,taskStat,taskId);
+                    task = new Task(taskTitle,taskDescription,taskStat,taskId,taskDueDate,taskDueTime);
 
                     toDoList.add(task);
                 }
@@ -203,7 +214,6 @@ public class HomeScreen extends AppCompatActivity
 
     }
 
-
     private void setUpList()
     {
         tasksAdapter = new TasksAdapter(HomeScreen.this,toDoList,UserName);
@@ -220,10 +230,7 @@ public class HomeScreen extends AppCompatActivity
         Dialog dialog = new Dialog(HomeScreen.this);
         dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         dialog.setContentView(R.layout.new_task);
-        
         dialog.show();
-
-
 
         EditText etTitle = dialog.findViewById(R.id.etTitle);
         EditText etDescription = dialog.findViewById(R.id.etDescription);
@@ -245,14 +252,13 @@ public class HomeScreen extends AppCompatActivity
                     etTitle.setError("Pleas enter a title for your task");
                 else
                 {
-                    task = new Task(etTitle.getText().toString(), etDescription.getText().toString(),1);
+                    task = new Task(etTitle.getText().toString(), etDescription.getText().toString(),1,dueDate,dueTime);
 
                     DatabaseReference reference = FirebaseDatabase.getInstance().getReference("Users").child(UserName).child("Tasks");
                     reference.push().setValue(task);
                     task.setId(reference.getKey());
                     Toast.makeText(HomeScreen.this, "The task was add to your to do list", Toast.LENGTH_SHORT).show();
                     dialog.dismiss();
-
                     toDoList.add(task);
                     tasksAdapter.notifyItemInserted(toDoList.size());
 
@@ -278,24 +284,38 @@ public class HomeScreen extends AppCompatActivity
                 calendar1.set(Calendar.MONTH, month);
                 calendar1.set(Calendar.DATE, date);
 
-                String dateText = DateFormat.format("EEEE, MMM d, yyyy", calendar1).toString();
-
-                //dateTextView.setText(dateText);
-                //tvDate.setText(dateText);
-
                 Calendar now = Calendar.getInstance();
                 final String FormatString = "EEEE, MMM d, yyyy";
 
-                if(now.get(Calendar.DATE) - calendar1.get(Calendar.DATE) > 0 )
+                if(now.get(Calendar.YEAR) - calendar1.get(Calendar.YEAR) > 0 || now.get(Calendar.MONTH) - calendar1.get(Calendar.MONTH) > 0)
                     tvDate.setText("Pleas enter a reasonable date");
+                else if(now.get(Calendar.YEAR) == calendar1.get(Calendar.YEAR) && now.get(Calendar.MONTH) == calendar1.get(Calendar.MONTH))
+                {
+                    if(now.get(Calendar.DATE) - calendar1.get(Calendar.DATE) > 0 )
+                        tvDate.setText("Pleas enter a reasonable date");
+                    else if(now.get(Calendar.DATE) == calendar1.get(Calendar.DATE))
+                    {
+                        tvDate.setText("Today");
+                        dueDate = DateFormat.format("MM/dd/yy", calendar1).toString();
+                        timePicker(tvDate,calendar1);
+                    }
+                    else if(now.get(Calendar.DATE) - calendar1.get(Calendar.DATE) == -1 )
+                    {
+                        tvDate.setText("Tomorrow");
+                        dueDate = DateFormat.format("MM/dd/yy", calendar1).toString();
+                        timePicker(tvDate,calendar1);
+                    }
+                    else
+                    {
+                        tvDate.setText(DateFormat.format(FormatString, calendar1).toString());
+                        dueDate = DateFormat.format("MM/dd/yy", calendar1).toString();
+                        timePicker(tvDate,calendar1);
+                    }
+                }
                 else
                 {
-                    if (now.get(Calendar.DATE) == calendar1.get(Calendar.DATE) )
-                        tvDate.setText("Today, ");
-                    else if (now.get(Calendar.DATE) - calendar1.get(Calendar.DATE) == -1 )
-                        tvDate.setText("Tomorrow, ");
-                    else
-                        tvDate.setText(DateFormat.format(FormatString, calendar1).toString()+". ");
+                    tvDate.setText(DateFormat.format(FormatString, calendar1).toString());
+                    dueDate = DateFormat.format("MM/dd/yy", calendar1).toString();
                     timePicker(tvDate,calendar1);
                 }
 
@@ -303,7 +323,6 @@ public class HomeScreen extends AppCompatActivity
         }, YEAR, MONTH, DATE);
 
         datePickerDialog.show();
-
     }
 
     private void timePicker(TextView  tvDate,Calendar calendarDate)
@@ -322,11 +341,51 @@ public class HomeScreen extends AppCompatActivity
                 calendar1.set(Calendar.HOUR, hour);
                 calendar1.set(Calendar.MINUTE, minute);
                 String dateText = DateFormat.format("h:mm a", calendar1).toString();
+
                 String date = tvDate.getText().toString();
 
                 Calendar now = Calendar.getInstance();
 
-                if(now.get(Calendar.DATE) == calendarDate.get(Calendar.DATE))
+                Date date1 = calendar1.getTime();
+                Date date2 = now.getTime();
+
+                long millis = date1.getTime() - date2.getTime();
+                int hours = (int) (millis / (1000 * 60 * 60));
+                int mins = (int) ((millis / (1000 * 60)) % 60);
+
+
+                if(now.get(Calendar.MONTH) == calendarDate.get(Calendar.MONTH) && now.get(Calendar.DATE) == calendarDate.get(Calendar.DATE) && now.get(Calendar.YEAR) == calendarDate.get(Calendar.YEAR) )
+                {
+                    // Late --> not possible
+                    if(hours > 0 && (now.get(Calendar.AM_PM) == calendar1.get(Calendar.AM_PM)))
+                    {
+                        tvDate.setText("Pleas enter a reasonable time and date");
+                    }
+
+                    // At list 30 mints until the task due ends
+                    else if(hours==0 && mins < 30)
+                    {
+                        tvDate.setText("Pleas enter at least 30 minutes difference");
+                    }
+                    else if(hours==1 && mins < -30)
+                        tvDate.setText("Pleas enter at least 30 minutes difference");
+                    else
+                    {
+                        tvDate.setText(date+", "+dateText);
+                        dueTime = DateFormat.format("h:mm a", calendar1).toString();
+                    }
+
+                }
+                else
+                {
+                    tvDate.setText(date+", "+dateText);
+                    dueTime = DateFormat.format("h:mm a", calendar1).toString();
+                }
+
+
+
+                /*
+                if(now.get(Calendar.MONTH) == calendarDate.get(Calendar.MONTH) && now.get(Calendar.DATE) == calendarDate.get(Calendar.DATE) && now.get(Calendar.YEAR) == calendarDate.get(Calendar.YEAR) )
                 {
                     // Late --> not possible
                     if(now.get(Calendar.HOUR) > calendar1.get(Calendar.HOUR))
@@ -343,17 +402,23 @@ public class HomeScreen extends AppCompatActivity
                         tvDate.setText("Pleas enter at least 30 minutes difference");
                     }
                     else
-                        tvDate.setText(date+dateText);
+                    {
+                        tvDate.setText(date+", "+dateText);
+                        dueTime = DateFormat.format("h:mm a", calendar1).toString();
+                    }
+
                 }
                 else
-                    tvDate.setText(date+dateText);
+                {
+                    tvDate.setText(date+", "+dateText);
+                    dueTime = DateFormat.format("h:mm a", calendar1).toString();
+                }
 
-
+                 */
             }
         }, HOUR, MINUTE, is24HourFormat);
 
         timePickerDialog.show();
-
     }
 
 

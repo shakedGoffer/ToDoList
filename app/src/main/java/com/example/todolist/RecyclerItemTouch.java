@@ -45,14 +45,17 @@ public class RecyclerItemTouch extends ItemTouchHelper.SimpleCallback
             builder.setPositiveButton("Delete Task",
                     new DialogInterface.OnClickListener() {
                         @Override
-                        public void onClick(DialogInterface dialog, int which) {
+                        public void onClick(DialogInterface dialog, int which)
+                        {
                             adapter.deleteItem(position);
                         }
                     });
             builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
                 @Override
-                public void onClick(DialogInterface dialog, int which) {
+                public void onClick(DialogInterface dialog, int which)
+                {
                     adapter.notifyItemChanged(viewHolder.getAdapterPosition());
+
 
                 }
             });
