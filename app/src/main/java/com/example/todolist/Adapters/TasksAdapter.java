@@ -5,6 +5,7 @@ import android.app.DatePickerDialog;
 import android.app.Dialog;
 import android.app.TimePickerDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.text.format.DateFormat;
@@ -79,10 +80,10 @@ public class TasksAdapter extends RecyclerView.Adapter<TasksAdapter.ViewHolder>
         holder.task.setText(item.getTitle());
 
         //due date and time
-        if( item.getDueDate() == "non")
+        if( item.getDueDate().equals("non"))
             holder.dueDate.setText("You didn't select a due date");
-        DueDate( item,holder.dueDate);
-        //notifyItemChanged(position);
+        else
+            DueDate( item,holder.dueDate);
 
 
         // stat
@@ -135,10 +136,9 @@ public class TasksAdapter extends RecyclerView.Adapter<TasksAdapter.ViewHolder>
 
         Calendar now = Calendar.getInstance();
 
-        if( task.getDueDate() == "non")
-            return;
-
-        if(now.get(Calendar.YEAR) - cal.get(Calendar.YEAR) > 0 || now.get(Calendar.MONTH) - cal.get(Calendar.MONTH) > 0)
+        if(task.getDueDate().equals("non"))
+            dueDate.setText("You didn't select a due date");
+        else if(now.get(Calendar.YEAR) - cal.get(Calendar.YEAR) > 0 || now.get(Calendar.MONTH) - cal.get(Calendar.MONTH) > 0)
         {
             dueDate.setTextColor(Color.RED);
             dueDate.setText("Due: " + task.getDueDate());
@@ -172,9 +172,6 @@ public class TasksAdapter extends RecyclerView.Adapter<TasksAdapter.ViewHolder>
             dueDate.setTextColor(0x8B000000);
         }
 
-
-
-
         if(!task.getDueTime().equals("non"))
             DueTime(task,dueDate,cal);
 
@@ -195,20 +192,48 @@ public class TasksAdapter extends RecyclerView.Adapter<TasksAdapter.ViewHolder>
             e.printStackTrace();
         }
         Calendar now = Calendar.getInstance();
+
+        Date date1 = cal.getTime();
+        Date date2 = now.getTime();
+
+        long millis = date1.getTime() - date2.getTime();
+        int hours = (int) (millis / (1000 * 60 * 60));
+        int mins = (int) ((millis / (1000 * 60)) % 60);
+
         if(now.get(Calendar.MONTH) == calendarDate.get(Calendar.MONTH) && now.get(Calendar.DATE) == calendarDate.get(Calendar.DATE) && now.get(Calendar.YEAR) == calendarDate.get(Calendar.YEAR) )
         {
-            if(now.get(Calendar.HOUR) > cal.get(Calendar.HOUR))
+            // Late --> not possible
+            /*
+            if(date1.getTime() - date2.getTime()>=0 && (hours != -now.get(Calendar.HOUR)  && hours <-1 ))
             {
                 dueDate.setTextColor(Color.RED);
                 dueDate.setText(dueDate.getText().toString()+", "+ task.getDueTime());
             }
-            else if(now.get(Calendar.HOUR) == cal.get(Calendar.HOUR) &&  now.get(Calendar.MINUTE) - cal.get(Calendar.MINUTE) >= 0)
+            else if(hours > 0 &&  hours != -now.get(Calendar.HOUR) && (now.get(Calendar.AM_PM) == cal.get(Calendar.AM_PM)))
             {
                 dueDate.setTextColor(Color.RED);
                 dueDate.setText(dueDate.getText().toString()+", "+ task.getDueTime());
             }
             else
                 dueDate.setText(dueDate.getText().toString()+", "+ task.getDueTime());
+
+             */
+
+
+            if(now.get(Calendar.HOUR) > cal.get(Calendar.HOUR) && now.get(Calendar.HOUR)-cal.get(Calendar.HOUR)!=now.get(Calendar.HOUR))
+            {
+                dueDate.setTextColor(Color.RED);
+                dueDate.setText(dueDate.getText().toString()+", "+ task.getDueTime());
+            }
+            else if(now.get(Calendar.HOUR) == cal.get(Calendar.HOUR) &&  now.get(Calendar.MINUTE) - cal.get(Calendar.MINUTE) >= 0  && now.get(Calendar.HOUR)-cal.get(Calendar.HOUR)!=-now.get(Calendar.HOUR) )
+            {
+                dueDate.setTextColor(Color.RED);
+                dueDate.setText(dueDate.getText().toString()+", "+ task.getDueTime());
+            }
+            else
+                dueDate.setText(dueDate.getText().toString()+", "+ task.getDueTime());
+
+
         }
         else
             dueDate.setText(dueDate.getText().toString()+", "+ task.getDueTime());
@@ -258,6 +283,10 @@ public class TasksAdapter extends RecyclerView.Adapter<TasksAdapter.ViewHolder>
         etDescription.setText(task.getDescription());
         TextView  tvDate = dialog.findViewById(R.id.tvDate);
         DueDate(task,tvDate);
+
+        String saveDate = task.getDueDate();
+        String saveTime = task.getDueTime();
+
         LinearLayout ly_DueDate = dialog.findViewById(R.id.ly_DueDate);
         ly_DueDate.setOnClickListener(new View.OnClickListener()
         {
@@ -286,8 +315,20 @@ public class TasksAdapter extends RecyclerView.Adapter<TasksAdapter.ViewHolder>
                     //Toast.makeText(context, "The task was add to your to do list", Toast.LENGTH_SHORT).show();
                     dialog.dismiss();
 
+                    DueDate(task,tvDate);
                     notifyItemChanged(position);
+
                 }
+            }
+        });
+
+        dialog.setOnCancelListener(new DialogInterface.OnCancelListener()
+        {
+            @Override
+            public void onCancel(DialogInterface dialogInterface)
+            {
+                task.setDueDate(saveDate);
+                task.setDueTime(saveTime);
             }
         });
 
@@ -299,8 +340,14 @@ public class TasksAdapter extends RecyclerView.Adapter<TasksAdapter.ViewHolder>
         int YEAR = calendar.get(Calendar.YEAR);
         int MONTH = calendar.get(Calendar.MONTH);
         int DATE = calendar.get(Calendar.DATE);
+        String saveDate = task.getDueDate();
+        String saveTime = task.getDueTime();
         task.setDueDate("non");
         task.setDueTime("non");
+        tvDate.setTextColor(0x8B000000);
+        tvDate.setText("pick a due date and time for your task");
+
+
 
         DatePickerDialog datePickerDialog = new DatePickerDialog(context, new DatePickerDialog.OnDateSetListener() {
             @Override
@@ -349,6 +396,16 @@ public class TasksAdapter extends RecyclerView.Adapter<TasksAdapter.ViewHolder>
             }
         }, YEAR, MONTH, DATE);
 
+        datePickerDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+            @Override
+            public void onCancel(DialogInterface dialogInterface)
+            {
+                task.setDueDate(saveDate);
+                task.setDueTime(saveTime);
+            }
+        });
+
+
         datePickerDialog.show();
     }
 
@@ -383,16 +440,14 @@ public class TasksAdapter extends RecyclerView.Adapter<TasksAdapter.ViewHolder>
                 if(now.get(Calendar.MONTH) == calendarDate.get(Calendar.MONTH) && now.get(Calendar.DATE) == calendarDate.get(Calendar.DATE) && now.get(Calendar.YEAR) == calendarDate.get(Calendar.YEAR) )
                 {
                     // Late --> not possible
-                    if(hours > 0 && (now.get(Calendar.AM_PM) == calendar1.get(Calendar.AM_PM)))
-                    {
+                    if(date1.getTime() - date2.getTime()<0.3 && (hours != -now.get(Calendar.HOUR)  && hours <-1 ))
                         tvDate.setText("Pleas enter a reasonable time and date");
-                    }
+                    else if(hours < 0 &&  hours != -now.get(Calendar.HOUR) && (now.get(Calendar.AM_PM) == calendar1.get(Calendar.AM_PM)))
+                        tvDate.setText("Pleas enter a reasonable time and date");
 
                     // At list 30 mints until the task due ends
                     else if(hours==0 && mins < 30)
-                    {
                         tvDate.setText("Pleas enter at least 30 minutes difference");
-                    }
                     else if(hours==1 && mins < -30)
                         tvDate.setText("Pleas enter at least 30 minutes difference");
                     else
@@ -401,7 +456,7 @@ public class TasksAdapter extends RecyclerView.Adapter<TasksAdapter.ViewHolder>
                         task.setDueTime(DateFormat.format("h:mm a", calendar1).toString());
                     }
 
-                    tvDate.setTextColor(0x8B000000);
+
                 }
                 else
                 {
@@ -409,7 +464,7 @@ public class TasksAdapter extends RecyclerView.Adapter<TasksAdapter.ViewHolder>
                     task.setDueTime(DateFormat.format("h:mm a", calendar1).toString());
                 }
             }
-        }, HOUR, MINUTE, true);
+        }, HOUR, MINUTE, false);
 
         timePickerDialog.show();
     }

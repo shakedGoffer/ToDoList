@@ -3,19 +3,31 @@ package com.example.todolist;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.NotificationCompat;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.app.AlarmManager;
 import android.app.DatePickerDialog;
 import android.app.Dialog;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.TimePickerDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.Menu;
@@ -49,14 +61,17 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Timer;
+import java.util.TimerTask;
 
-public class HomeScreen extends AppCompatActivity
-{
+public class HomeScreen extends AppCompatActivity {
     String UserName;
     ImageButton btnAdd_task;
     Task task;
     RecyclerView ryTasks;
     TasksAdapter tasksAdapter;
+    public static final String NOTIFICATION_CHANNEL_ID = "10001" ;
+    private final static String default_notification_channel_id = "default" ;
 
     public static ArrayList<Task> toDoList = new ArrayList<Task>();
 
@@ -258,9 +273,32 @@ public class HomeScreen extends AppCompatActivity
                     reference.push().setValue(task);
                     task.setId(reference.getKey());
                     Toast.makeText(HomeScreen.this, "The task was add to your to do list", Toast.LENGTH_SHORT).show();
+                    Notification(task);
                     dialog.dismiss();
                     toDoList.add(task);
                     tasksAdapter.notifyItemInserted(toDoList.size());
+
+
+
+                    if(!task.getDueDate().equals("non") && !task.getDueTime().equals("non"))
+                    {
+                        SimpleDateFormat sdfTime = new SimpleDateFormat("h:mm a");
+                        SimpleDateFormat sdfDate = new SimpleDateFormat("MM/dd/yy");
+                        Calendar cal = null;
+                        try
+                        {
+                            cal = Calendar.getInstance();
+                            cal.setTime(sdfTime.parse(task.getDueTime()));
+                            cal.setTime(sdfDate.parse(task.getDueDate()));
+                        }
+                        catch (ParseException e)
+                        {
+                            e.printStackTrace();
+                        }
+
+                       // startAlarm(cal);
+                    }
+
 
                 }
             }
@@ -330,7 +368,6 @@ public class HomeScreen extends AppCompatActivity
         Calendar calendar = Calendar.getInstance();
         int HOUR = calendar.get(Calendar.HOUR);
         int MINUTE = calendar.get(Calendar.MINUTE);
-        boolean is24HourFormat = DateFormat.is24HourFormat(this);
 
         TimePickerDialog timePickerDialog = new TimePickerDialog(this, new TimePickerDialog.OnTimeSetListener() {
             @Override
@@ -342,12 +379,15 @@ public class HomeScreen extends AppCompatActivity
                 calendar1.set(Calendar.MINUTE, minute);
                 String dateText = DateFormat.format("h:mm a", calendar1).toString();
 
-                String date = tvDate.getText().toString();
+                calendarDate.set(Calendar.HOUR,hour);
+                calendarDate.set(Calendar.MINUTE,minute);
 
+                String date = tvDate.getText().toString();
                 Calendar now = Calendar.getInstance();
 
                 Date date1 = calendar1.getTime();
                 Date date2 = now.getTime();
+
 
                 long millis = date1.getTime() - date2.getTime();
                 int hours = (int) (millis / (1000 * 60 * 60));
@@ -357,22 +397,21 @@ public class HomeScreen extends AppCompatActivity
                 if(now.get(Calendar.MONTH) == calendarDate.get(Calendar.MONTH) && now.get(Calendar.DATE) == calendarDate.get(Calendar.DATE) && now.get(Calendar.YEAR) == calendarDate.get(Calendar.YEAR) )
                 {
                     // Late --> not possible
-                    if(hours > 0 && (now.get(Calendar.AM_PM) == calendar1.get(Calendar.AM_PM)))
-                    {
+                    if(date1.getTime() - date2.getTime()<0.3 && (hours != -now.get(Calendar.HOUR)  && hours <-1 ))
                         tvDate.setText("Pleas enter a reasonable time and date");
-                    }
+                    else if(hours < 0 &&  hours != -now.get(Calendar.HOUR) && (now.get(Calendar.AM_PM) == calendar1.get(Calendar.AM_PM)))
+                        tvDate.setText("Pleas enter a reasonable time and date");
 
-                    // At list 30 mints until the task due ends
+                        // At list 30 mints until the task due ends
                     else if(hours==0 && mins < 30)
-                    {
                         tvDate.setText("Pleas enter at least 30 minutes difference");
-                    }
                     else if(hours==1 && mins < -30)
                         tvDate.setText("Pleas enter at least 30 minutes difference");
                     else
                     {
                         tvDate.setText(date+", "+dateText);
                         dueTime = DateFormat.format("h:mm a", calendar1).toString();
+
                     }
 
                 }
@@ -380,9 +419,8 @@ public class HomeScreen extends AppCompatActivity
                 {
                     tvDate.setText(date+", "+dateText);
                     dueTime = DateFormat.format("h:mm a", calendar1).toString();
+
                 }
-
-
 
                 /*
                 if(now.get(Calendar.MONTH) == calendarDate.get(Calendar.MONTH) && now.get(Calendar.DATE) == calendarDate.get(Calendar.DATE) && now.get(Calendar.YEAR) == calendarDate.get(Calendar.YEAR) )
@@ -416,10 +454,105 @@ public class HomeScreen extends AppCompatActivity
 
                  */
             }
-        }, HOUR, MINUTE, is24HourFormat);
+        }, HOUR, MINUTE, false);
 
         timePickerDialog.show();
     }
+
+
+    private void startAlarm(Calendar c)
+    {
+        Toast.makeText(HomeScreen.this,"1",Toast.LENGTH_LONG).show();
+
+
+        /*
+        if (c.before(Calendar.getInstance()))
+        {
+            c.add(Calendar.DATE, 1);
+        }
+
+
+        PendingIntent pi = PendingIntent.getService(HomeScreen.this, 0 , new Intent(HomeScreen.this, AlertReceiver.class),PendingIntent.FLAG_UPDATE_CURRENT);
+        AlarmManager am = (AlarmManager) HomeScreen.this.getSystemService(Context.ALARM_SERVICE);
+        am.setRepeating(AlarmManager.RTC_WAKEUP, c.getTimeInMillis(),
+                AlarmManager.INTERVAL_DAY, pi);
+
+
+
+        Intent notifyIntent = new Intent(HomeScreen.this,AlertReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast
+                (HomeScreen.this, 1 , notifyIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        AlarmManager alarmManager = (AlarmManager) HomeScreen.this.getSystemService(Context.ALARM_SERVICE);
+        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP,  System.currentTimeMillis(),
+                1000 * 60 * 60 * 24, pendingIntent);
+
+        Toast.makeText(HomeScreen.this,"2",Toast.LENGTH_LONG).show();
+        */
+
+
+        ////
+
+        Intent myIntent = new Intent(getApplicationContext() , AlertService. class ) ;
+        AlarmManager alarmManager = (AlarmManager) getSystemService( ALARM_SERVICE ) ;
+        PendingIntent pendingIntent = PendingIntent. getService ( this, 0 , myIntent , 0 ) ;
+
+
+
+        if (c.before(Calendar.getInstance()))
+        {
+            c.add(Calendar. DAY_OF_MONTH , 1 ) ;
+        }
+
+        alarmManager.setRepeating(AlarmManager. RTC_WAKEUP , c.getTimeInMillis() , 1000 * 60 * 60 * 24 , pendingIntent) ;
+
+
+
+    }
+
+    private void cancelAlarm()
+    {
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(this, AlertReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 1, intent, 0);
+
+        alarmManager.cancel(pendingIntent);
+        Toast.makeText(HomeScreen.this, "Alarm canceled", Toast.LENGTH_SHORT).show();
+    }
+
+
+
+    private void Notification(Task task)
+    {
+        final Handler handler = new Handler();
+        handler.postDelayed(new Runnable()
+        {
+                    @Override
+                    public void run(){
+
+                        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                        {
+                            NotificationChannel channel = new NotificationChannel
+                                    ("Task reminder","Task reminder",NotificationManager.IMPORTANCE_DEFAULT);
+                            NotificationManager manager = getSystemService(NotificationManager.class);
+                            manager.createNotificationChannel(channel);
+                        }
+                        NotificationCompat.Builder builder = new NotificationCompat.Builder( HomeScreen.this, "Task reminder" ) ;
+                        builder.setContentTitle( "Task reminder" ) ;
+                        builder.setContentText("Your task: " + task.getTitle()+" due date has passed");
+                        builder.setSmallIcon(R.drawable. ic_time ) ;
+                        builder.setAutoCancel( true ) ;
+
+                        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                        notificationManager.notify(1, builder.build());
+                    }
+
+                }, 50000);
+
+    }
+
+
+
 
 
     //Back press
