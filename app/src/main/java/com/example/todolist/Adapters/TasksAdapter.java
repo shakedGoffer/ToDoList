@@ -149,13 +149,12 @@ public class TasksAdapter extends RecyclerView.Adapter<TasksAdapter.ViewHolder>
             {
                 dueDate.setTextColor(Color.RED);
                 dueDate.setText("Due: Yesterday");
-                return;
             }
             else if(now.get(Calendar.DATE) - cal.get(Calendar.DATE) > 0 )
             {
                 dueDate.setTextColor(Color.RED);
                 dueDate.setText("Due: " + task.getDueDate());
-                return;
+
             }
             else if(now.get(Calendar.DATE) == cal.get(Calendar.DATE))
                 dueDate.setText("Due: Today");
@@ -164,13 +163,15 @@ public class TasksAdapter extends RecyclerView.Adapter<TasksAdapter.ViewHolder>
             else
                 dueDate.setText("Due: " + task.getDueDate());
 
-            dueDate.setTextColor(0x8B000000);
+            //dueDate.setTextColor(0x8B000000);
+
         }
         else
         {
             dueDate.setText("Due: " + task.getDueDate());
             dueDate.setTextColor(0x8B000000);
         }
+
 
         if(!task.getDueTime().equals("non"))
             DueTime(task,dueDate,cal);

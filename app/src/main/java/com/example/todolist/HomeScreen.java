@@ -1,13 +1,18 @@
 package com.example.todolist;
 
+import static android.media.RingtoneManager.getDefaultUri;
+
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.DatePickerDialog;
 import android.app.Dialog;
@@ -15,11 +20,15 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.Service;
 import android.app.TimePickerDialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.media.Ringtone;
@@ -28,6 +37,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.Menu;
@@ -65,13 +75,13 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class HomeScreen extends AppCompatActivity {
+    private static final int NOTIFICATION_REMINDER_NIGHT = 3 ;
     String UserName;
     ImageButton btnAdd_task;
     Task task;
     RecyclerView ryTasks;
     TasksAdapter tasksAdapter;
-    public static final String NOTIFICATION_CHANNEL_ID = "10001" ;
-    private final static String default_notification_channel_id = "default" ;
+
 
     public static ArrayList<Task> toDoList = new ArrayList<Task>();
 
@@ -273,10 +283,11 @@ public class HomeScreen extends AppCompatActivity {
                     reference.push().setValue(task);
                     task.setId(reference.getKey());
                     Toast.makeText(HomeScreen.this, "The task was add to your to do list", Toast.LENGTH_SHORT).show();
-                    Notification(task);
                     dialog.dismiss();
                     toDoList.add(task);
                     tasksAdapter.notifyItemInserted(toDoList.size());
+
+                    startService(task);
 
 
 
@@ -296,7 +307,7 @@ public class HomeScreen extends AppCompatActivity {
                             e.printStackTrace();
                         }
 
-                       // startAlarm(cal);
+                        //startAlarm(cal,task);
                     }
 
 
@@ -460,70 +471,32 @@ public class HomeScreen extends AppCompatActivity {
     }
 
 
-    private void startAlarm(Calendar c)
+
+    public void startService(Task task)
     {
-        Toast.makeText(HomeScreen.this,"1",Toast.LENGTH_LONG).show();
+        String taskTitle = task.getTitle();
 
+        Intent serviceIntent = new Intent(this, ExampleService.class);
+        serviceIntent.putExtra("taskTitle", taskTitle);
 
-        /*
-        if (c.before(Calendar.getInstance()))
-        {
-            c.add(Calendar.DATE, 1);
-        }
-
-
-        PendingIntent pi = PendingIntent.getService(HomeScreen.this, 0 , new Intent(HomeScreen.this, AlertReceiver.class),PendingIntent.FLAG_UPDATE_CURRENT);
-        AlarmManager am = (AlarmManager) HomeScreen.this.getSystemService(Context.ALARM_SERVICE);
-        am.setRepeating(AlarmManager.RTC_WAKEUP, c.getTimeInMillis(),
-                AlarmManager.INTERVAL_DAY, pi);
-
-
-
-        Intent notifyIntent = new Intent(HomeScreen.this,AlertReceiver.class);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast
-                (HomeScreen.this, 1 , notifyIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-
-        AlarmManager alarmManager = (AlarmManager) HomeScreen.this.getSystemService(Context.ALARM_SERVICE);
-        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP,  System.currentTimeMillis(),
-                1000 * 60 * 60 * 24, pendingIntent);
-
+        Toast.makeText(HomeScreen.this,"startAlarm",Toast.LENGTH_LONG).show();
+        ContextCompat.startForegroundService(this, serviceIntent);
         Toast.makeText(HomeScreen.this,"2",Toast.LENGTH_LONG).show();
-        */
 
-
-        ////
-
-        Intent myIntent = new Intent(getApplicationContext() , AlertService. class ) ;
-        AlarmManager alarmManager = (AlarmManager) getSystemService( ALARM_SERVICE ) ;
-        PendingIntent pendingIntent = PendingIntent. getService ( this, 0 , myIntent , 0 ) ;
-
-
-
-        if (c.before(Calendar.getInstance()))
-        {
-            c.add(Calendar. DAY_OF_MONTH , 1 ) ;
-        }
-
-        alarmManager.setRepeating(AlarmManager. RTC_WAKEUP , c.getTimeInMillis() , 1000 * 60 * 60 * 24 , pendingIntent) ;
-
-
-
+        //stopService();
     }
 
-    private void cancelAlarm()
+    public void stopService()
     {
-        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        Intent intent = new Intent(this, AlertReceiver.class);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 1, intent, 0);
-
-        alarmManager.cancel(pendingIntent);
-        Toast.makeText(HomeScreen.this, "Alarm canceled", Toast.LENGTH_SHORT).show();
+        Intent serviceIntent = new Intent(this, ExampleService.class);
+        stopService(serviceIntent);
     }
 
 
 
     private void Notification(Task task)
     {
+        /*
         final Handler handler = new Handler();
         handler.postDelayed(new Runnable()
         {
@@ -549,6 +522,8 @@ public class HomeScreen extends AppCompatActivity {
 
                 }, 50000);
 
+
+         */
     }
 
 

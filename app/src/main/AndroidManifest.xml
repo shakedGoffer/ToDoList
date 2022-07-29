@@ -34,17 +34,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <receiver
-            android:name=".AlertReceiver"
-            android:enabled="true"
-            android:exported="true" >
-        </receiver>
-        <service
-            android:name=".AlertService"
-            android:enabled="true"
-            android:exported="true"
-            >
-        </service>
+
+
+
+        <service android:name=".ExampleService" />
+
     </application>
 
 </manifest>

@@ -3,6 +3,7 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Users/segof/AndroidStudioProjects/ToDoList/app/src/main/res/drawable/icon.xml" value="0.1275" />
         <entry key="..\:/Users/segof/AndroidStudioProjects/ToDoList/app/src/main/res/layout/activity_change_password.xml" value="0.20416666666666666" />
         <entry key="..\:/Users/segof/AndroidStudioProjects/ToDoList/app/src/main/res/layout/activity_help.xml" value="0.203125" />
         <entry key="..\:/Users/segof/AndroidStudioProjects/ToDoList/app/src/main/res/layout/activity_home_screen.xml" value="0.1890625" />
